@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const app = express();
 
@@ -26,6 +27,34 @@ app.get("/ai-coach",(req,res)=>{
   });
 });
 
+app.post("/create-checkout-session", async (req, res) => {
+  const { priceId } = req.body;
+
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      payment_method_types: ["card"],
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
+        },
+      ],
+
+      // 🔥 FREE TRIAL
+      subscription_data: {
+        trial_period_days: 7,
+      },
+
+      success_url: "https://shredboost-api.onrender.com",
+      cancel_url: "https://shredboost-api.onrender.com",
+    });
+
+    res.json({ url: session.url });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 /* AI Coach POST route (Flutter app uses this) */
 app.post("/ai-coach",(req,res)=>{
   try {
